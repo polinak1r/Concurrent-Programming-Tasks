@@ -17,8 +17,23 @@ class MSQueueWithLinearTimeRemove<E> : QueueWithRemove<E> {
     override fun enqueue(element: E) {
         // TODO: When adding a new node, check whether
         // TODO: the previous tail is logically removed.
-        // TODO: If so, remove it physically from the linked list.
-        TODO("Implement me!")
+        // TODO: If so, remove it physically from the linked list
+
+        val node = Node(element)
+
+        while (true) {
+            val curTail = tail.value
+
+            if (curTail.next.compareAndSet(null, node)) {
+                tail.compareAndSet(curTail, node)
+                if (curTail.extractedOrRemoved) curTail.removePhysic()
+                return
+            } else {
+                val next = curTail.next.value ?: continue
+                tail.compareAndSet(curTail, next)
+                if (curTail.extractedOrRemoved) curTail.removePhysic()
+            }
+        }
     }
 
     override fun dequeue(): E? {
@@ -26,7 +41,15 @@ class MSQueueWithLinearTimeRemove<E> : QueueWithRemove<E> {
         // TODO: mark the node that contains the extracting
         // TODO: element as "extracted or removed", restarting
         // TODO: the operation if this node has already been removed.
-        TODO("Implement me!")
+
+        while (true) {
+            val curHead = head.value
+            val curHeadNext = curHead.next.value ?: return null
+
+            if (head.compareAndSet(curHead, curHeadNext) && curHeadNext.markExtractedOrRemoved()) {
+                return curHeadNext.element
+            }
+        }
     }
 
     override fun remove(element: E): Boolean {
@@ -119,7 +142,33 @@ class MSQueueWithLinearTimeRemove<E> : QueueWithRemove<E> {
             // TODO: Do not remove `head` and `tail` physically to make
             // TODO: the algorithm simpler. In case a tail node is logically removed,
             // TODO: it will be removed physically by `enqueue(..)`.
-            TODO("Implement me!")
+            if (markExtractedOrRemoved()) {
+
+                removePhysic()
+
+                return true
+            }
+            return false
+        }
+
+        fun removePhysic() {
+            if (this == tail.value) return
+            if (this == head.value) return
+            if (this.next.value == null) return
+
+            val prevNode = findPrev() ?: return
+            val nextNode = next.value
+            prevNode.next.getAndSet(nextNode)
+            if (prevNode.extractedOrRemoved) prevNode.removePhysic()
+            if (nextNode != null && nextNode.extractedOrRemoved) nextNode.removePhysic()
+        }
+
+        private fun findPrev(): Node? {
+            var prevNode = head.value
+            while (prevNode.next.value !== this) {
+                prevNode = prevNode.next.value ?: return null
+            }
+            return prevNode
         }
     }
 }

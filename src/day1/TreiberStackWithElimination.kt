@@ -16,7 +16,8 @@ class TreiberStackWithElimination<E> : Stack<E> {
     }
 
     private fun tryPushElimination(element: E): Boolean {
-        TODO("Implement me!")
+
+        // TODO("Implement me!")
         // TODO: Choose a random cell in `eliminationArray`
         // TODO: and try to install the element there.
         // TODO: Wait `ELIMINATION_WAIT_CYCLES` loop cycles
@@ -24,16 +25,45 @@ class TreiberStackWithElimination<E> : Stack<E> {
         // TODO: element. If so, clean the cell and finish,
         // TODO: returning `true`. Otherwise, move the cell
         // TODO: to the empty state and return `false`.
+
+        val index = randomCellIndex()
+        eliminationArray[index].also {
+            if (it.compareAndSet(CELL_STATE_EMPTY, element)) {
+                var counter = 0
+                while (counter < ELIMINATION_WAIT_CYCLES) {
+                    counter++
+                }
+
+                while (true) {
+                    val curState = it.value
+                    if (it.compareAndSet(curState, CELL_STATE_EMPTY)) {
+                        return curState == CELL_STATE_RETRIEVED
+                    }
+                }
+            }
+        }
+        return false
     }
 
     override fun pop(): E? = tryPopElimination() ?: stack.pop()
 
     private fun tryPopElimination(): E? {
-        TODO("Implement me!")
+
+        // TODO("Implement me!")
         // TODO: Choose a random cell in `eliminationArray`
         // TODO: and try to retrieve an element from there.
         // TODO: On success, return the element.
         // TODO: Otherwise, if the cell is empty, return `null`.
+
+        val index = randomCellIndex()
+        eliminationArray[index].also {
+            val retrievedValue = it.value
+            if (retrievedValue == CELL_STATE_RETRIEVED || retrievedValue == CELL_STATE_EMPTY) return null
+            if (it.compareAndSet(retrievedValue, CELL_STATE_RETRIEVED)) {
+                return retrievedValue as E?
+            }
+        }
+        return null
     }
 
     private fun randomCellIndex(): Int =
